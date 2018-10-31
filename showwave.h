@@ -4,19 +4,13 @@
 #include <QWidget>
 #include "qcustomplot.h"
 #define BUFFERSIZE 100
+#define PLOTSIZE 5
 class ShowWave : public QWidget
 {
     Q_OBJECT
 public:
     explicit ShowWave(QWidget *parent = 0);
-    double Buff[2*BUFFERSIZE];
-    DOUBLE currentData;
-    void showLine(QCustomPlot *customPlot);
-    void showLine2(QCustomPlot *customPlot);
-    void showLine3(QCustomPlot *customPlot);
-    void showLine4(QCustomPlot *customPlot);
-    void showLine5(QCustomPlot *customPlot);
-    void readyShowLine(double recvMat[16][5]);
+    void showLine(QCustomPlot *customPlot[PLOTSIZE], double recvMat[16][5]);
     bool isShowWave;
     int fromB;
     int toT;
@@ -36,11 +30,8 @@ private slots:
     void showLable();
 
 private:
-    QCustomPlot *customPlot;
-    QCustomPlot *customPlot2;
-    QCustomPlot *customPlot3;
-    QCustomPlot *customPlot4;
-    QCustomPlot *customPlot5;
+
+    QCustomPlot *customPlotARY[PLOTSIZE];
     QGridLayout *mainLayout;
     QLabel *label1;
     QLabel *label2;

@@ -31,7 +31,8 @@ SOURCES += main.cpp\
     showwave.cpp \
     recorddata.cpp \
     qcustomplot.cpp \
-    systemsetting.cpp
+    systemsetting.cpp \
+    EDFlib-master/edflib.c
 
 HEADERS  += mainwindow.h \
     subjectmanagement.h \
@@ -40,7 +41,8 @@ HEADERS  += mainwindow.h \
     showwave.h \
     recorddata.h \
     qcustomplot.h \
-    systemsetting.h
+    systemsetting.h \
+    EDFlib-master/edflib.h
 
 RESOURCES += \
     image.qrc

@@ -3,11 +3,7 @@
 #include <QHBoxLayout>
 #include <QDialog>
 
-DOUBLE dataplot1=0;
-DOUBLE dataplot2=0;
-DOUBLE dataplot3=0;
-DOUBLE dataplot4=0;
-DOUBLE dataplot5=0;
+
 DOUBLE recv_double_buff[16][5]={0};
 
 MainWindow::MainWindow(QWidget *parent)
