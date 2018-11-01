@@ -25,21 +25,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    subjectmanagement.cpp \
-    handmovement.cpp \
-    muscleselect.cpp \
     showwave.cpp \
-    recorddata.cpp \
     qcustomplot.cpp \
     systemsetting.cpp \
     EDFlib-master/edflib.c
 
 HEADERS  += mainwindow.h \
-    subjectmanagement.h \
-    handmovement.h \
-    muscleselect.h \
     showwave.h \
-    recorddata.h \
     qcustomplot.h \
     systemsetting.h \
     EDFlib-master/edflib.h

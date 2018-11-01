@@ -33,45 +33,10 @@ void MainWindow::ReadTCPData()
 {
     QByteArray buffer = tcpClient->readAll();
 
-//    char *sbuffer;
-//    char data1[5]="0000";
-//    char data2[5]="0000";
-//    char data3[5]="0000";
     if(!buffer.isEmpty())
     {
         memcpy(recv_double_buff,buffer,buffer.size());
-//        dataplot1=recv_double_buff[15][0];
-//        dataplot2=recv_double_buff[15][1];
-//        dataplot3=recv_double_buff[15][2];
-//        dataplot4=recv_double_buff[15][3];
-//        dataplot5=recv_double_buff[15][4];
-//        sbuffer=buffer.data();
-//        if(sbuffer[0]=='5'&&sbuffer[1]=='A')
-//        {
 
-//            data1[0]=sbuffer[4];
-//            data1[1]=sbuffer[5];
-//            data1[2]=sbuffer[6];
-//            data1[3]=sbuffer[7];
-
-//            data2[0]=sbuffer[10];
-//            data2[1]=sbuffer[11];
-//            data2[2]=sbuffer[12];
-//            data2[3]=sbuffer[13];
-
-//            data3[0]=sbuffer[16];
-//            data3[1]=sbuffer[17];
-//            data3[2]=sbuffer[18];
-//            data3[3]=sbuffer[19];
-
-//            dataplot1=atoi(data1);
-//            dataplot2=atoi(data2);
-//            dataplot3=atoi(data3);
-
-
-//        }
-
-//       //sbuffer=buffer.toStdString();
     }
 }
 void MainWindow::ReadTCPError(QAbstractSocket::SocketError)
@@ -103,14 +68,6 @@ void MainWindow::createActions()
 
     deviceSetting = new QAction(QIcon(":/image/DeviceSetting.jpg"),tr("DeviceSetting"),this);
     deviceSetting->setStatusTip(tr("打开设备设置"));
-
-    //    showHandAction = new QAction(QIcon(":/image/handsAction.png"),tr("手部动作展示"),this);
-    //    connect(showHandAction,SIGNAL(triggered()),this,SLOT(showHandMovement()));
-    //    showHandAction->setStatusTip(tr("展示预识别动作"));
-
-    //    showMuscle = new QAction(QIcon(":/image/Muscle.jpg"),tr("可选择肌肉"),this);
-    //    connect(showMuscle,SIGNAL(triggered()),this,SLOT(showMuscleSelect()));
-    //    showMuscle->setStatusTip(tr("展示可选择肌肉"));
 
     aboutRecoder = new QAction(QIcon(":/image/aboutRecorder.png"),tr("AboutRecorder"),this);
     connect(aboutRecoder,SIGNAL(triggered()),this,SLOT(showAboutWindow()));
@@ -196,28 +153,6 @@ void MainWindow::createToolBars()
 
 /********************************创建相关窗口的槽函数************************/
 
-void MainWindow::showSubjectManagement()
-{
-    subjectWindow = new SubjectManagement();
-    subjectWindow->setAttribute(Qt::WA_QuitOnClose,false);
-    subjectWindow->show();
-}
-
-void MainWindow::showHandMovement()
-{
-    handWindow = new HandMovement();
-    handWindow->setAttribute(Qt::WA_QuitOnClose,false);
-    handWindow->setGeometry(200,70,900,600);
-    handWindow->setFixedSize(900,600);
-    handWindow->show();
-}
-
-void MainWindow::showMuscleSelect()
-{
-    muscleWindow = new MuscleSelect();
-    muscleWindow->setAttribute(Qt::WA_QuitOnClose,false);
-    muscleWindow->show();
-}
 
 void MainWindow::showWavePlot()
 {
@@ -226,10 +161,7 @@ void MainWindow::showWavePlot()
 
 void MainWindow::showRecordData()
 {
-    recordWindow = new RecordData();
-    recordWindow->setAttribute(Qt::WA_QuitOnClose,false);
-    recordWindow->show();
-    isOpenRecordWindow=true;
+
 }
 
 void MainWindow::showAboutWindow()
@@ -248,10 +180,7 @@ void MainWindow::closeWavePlot()
 
 void MainWindow::closeRecordData()
 {
-    if(isOpenRecordWindow){
-        recordWindow->close();
-        isOpenRecordWindow=false;
-    }
+
 }
 
 /********************************波形放大缩小的槽函数************************/
@@ -315,7 +244,6 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         QCursor cursor;
         cursor.setShape(Qt::ClosedHandCursor);
         QApplication::setOverrideCursor(cursor);
-        offset = event->globalPos() - pos();
     }
 }
 

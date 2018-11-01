@@ -33,15 +33,8 @@ private:
 
     QCustomPlot *customPlotARY[PLOTSIZE];
     QGridLayout *mainLayout;
-    QLabel *label1;
-    QLabel *label2;
-    QLabel *label3;
-    QLabel *label4;
-    QLabel *label5;
-    QLabel *label6;
     QTimer *timer;
     QComboBox *combox1;
-    QPoint offset;
 
 };
 

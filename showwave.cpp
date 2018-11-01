@@ -18,6 +18,9 @@ QString sChannellist="IED_AF3,IED_F7,IED_F3,IED_FC5,IED_T7,IED_P7,IED_Pz,IED_O1,
 QStringList channellist=sChannellist.split(',');
 QString sWavelist="theta,alpha,low_beta,high_beta,gamma";
 QStringList wavelist=sWavelist.split(',');
+QString sWavelist2="power,smooth,activity,NULL,NULL";
+QStringList wavelist2=sWavelist2.split(',');
+
 
 ShowWave::ShowWave(QWidget *parent) : QWidget(parent)
 {
@@ -30,42 +33,6 @@ ShowWave::ShowWave(QWidget *parent) : QWidget(parent)
     connect(timer,SIGNAL(timeout()),this,SLOT(readyShowLine()));
 
     mainLayout = new QGridLayout(this);
-    label1 = new QLabel(tr("theta"));
-    label1->setFrameStyle(QFrame::Plain|QFrame::Raised); // 设置框架样式
-    label1->setAlignment(Qt::AlignCenter);// 设置对齐方式为居中
-    label1->setStyleSheet("color:black;");
-    label1->setFont(QFont("Timers",9, QFont::Bold));
-
-    label2 = new QLabel(tr("alpha"));
-    label2->setFrameStyle(QFrame::Plain|QFrame::Raised); // 设置框架样式
-    label2->setAlignment(Qt::AlignCenter);// 设置对齐方式为居中
-    label2->setStyleSheet("color:black;");
-    label2->setFont(QFont("Timers",9, QFont::Bold));
-
-    label3 = new QLabel(tr("low_beta"));
-    label3->setFrameStyle(QFrame::Plain|QFrame::Raised); // 设置框架样式
-    label3->setAlignment(Qt::AlignCenter);// 设置对齐方式为居中
-    label3->setStyleSheet("color:black;");
-    label3->setFont(QFont("Timers",9, QFont::Bold));
-
-    label4 = new QLabel(tr("high_beta"));
-    label4->setFrameStyle(QFrame::Plain|QFrame::Raised); // 设置框架样式
-    label4->setAlignment(Qt::AlignCenter);// 设置对齐方式为居中
-    label4->setStyleSheet("color:black;");
-    label4->setFont(QFont("Timers",9, QFont::Bold));
-
-    label5 = new QLabel(tr("gamma"));
-    label5->setFrameStyle(QFrame::Plain|QFrame::Raised); // 设置框架样式
-    label5->setAlignment(Qt::AlignCenter);// 设置对齐方式为居中
-    label5->setStyleSheet("color:black;");
-    label5->setFont(QFont("Timers",9, QFont::Bold));
-
-    label6 = new QLabel(tr("CHOOSE"));
-    label6->setFrameStyle(QFrame::Plain|QFrame::Raised); // 设置框架样式
-    label6->setAlignment(Qt::AlignRight);// 设置对齐方式为居中
-    label6->setStyleSheet("color:red;");
-    label6->setFont(QFont("Timers",12, QFont::Bold));
-
     combox1=new QComboBox(this);
     combox1->addItems(channellist);
     connect(combox1,SIGNAL(currentIndexChanged(int)),this,SLOT(showLable()));
@@ -85,20 +52,16 @@ ShowWave::ShowWave(QWidget *parent) : QWidget(parent)
         customPlotARY[i]->xAxis->setRange(0,BUFFERSIZE);
         customPlotARY[i]->yAxis->setRange(fromB,toT);
         customPlotARY[i]->xAxis->setLabel(tr("time"));
-        customPlotARY[i]->yAxis->setLabel(tr("data"));
+        customPlotARY[i]->yAxis->setLabel(wavelist[i]);
     }
 
-    mainLayout->addWidget(label1,4,0,1,1);
+
     mainLayout->addWidget(customPlotARY[0],0,1,8,25);
-    mainLayout->addWidget(label2,12,0,1,1);
     mainLayout->addWidget(customPlotARY[1],8,1,8,25);
-    mainLayout->addWidget(label3,20,0,1,1);
     mainLayout->addWidget(customPlotARY[2],16,1,8,25);
-    mainLayout->addWidget(label4,28,0,1,1);
     mainLayout->addWidget(customPlotARY[3],24,1,8,25);
-    mainLayout->addWidget(label5,36,0,1,1);
     mainLayout->addWidget(customPlotARY[4],32,1,8,25);
-    mainLayout->addWidget(combox1,40,0,1,1);
+    mainLayout->addWidget(combox1,40,1,1,1);
     showLable();
     timer->start(100);
 }
@@ -140,7 +103,6 @@ void ShowWave::showLine(QCustomPlot *customPlot[PLOTSIZE],double recvMat[16][5])
             if(isShowWave)
             {
                 customPlot[i]->graph(0)->setData(Xvalue[i],Yvalue[i]);
-                //customPlot[i]->graph(0)->setName(tr("OutPut"));
                 customPlot[i]->replot();//重绘图形
             }
 
@@ -154,23 +116,16 @@ void ShowWave::showLine(QCustomPlot *customPlot[PLOTSIZE],double recvMat[16][5])
 void ShowWave::showLable()
 {
     int currentChannel=combox1->currentIndex();
-    if(currentChannel<15){
-        label1->setText(channellist[currentChannel]+QString("-")+wavelist[0]);
-        label2->setText(channellist[currentChannel]+QString("-")+wavelist[1]);
-        label3->setText(channellist[currentChannel]+QString("-")+wavelist[2]);
-        label4->setText(channellist[currentChannel]+QString("-")+wavelist[3]);
-        label5->setText(channellist[currentChannel]+QString("-")+wavelist[4]);
+        for(int i=0;i<PLOTSIZE;i++)
+        {
+            if(currentChannel<15)
+            {
+            customPlotARY[i]->yAxis->setLabel(wavelist[i]);
 
-
-    }
-    else if(currentChannel>=15){
-        label1->setText(channellist[currentChannel]+QString("-")+QString("result1"));
-        label2->setText(channellist[currentChannel]+QString("-")+QString("result2"));
-        label3->setText(channellist[currentChannel]+QString("-")+QString("result3"));
-        label4->setText("NULL");
-        label5->setText("NULL");
-
-    }
+            }
+            else customPlotARY[i]->yAxis->setLabel(wavelist2[i]);
+            customPlotARY[i]->replot();//重绘图形
+        }
 
 }
 
