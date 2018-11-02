@@ -2,13 +2,21 @@
 #include <QIcon>
 #include <QHBoxLayout>
 #include <QDialog>
+#include"EDFlib-master/edflib.h"
+#include<QDebug>
 
+#define edf_chns 80
+#define SMP_FREQ 2
+#define PERI_TINMER_MS 1000/SMP_FREQ
 
+int hdl;
+int edf_buf[edf_chns][SMP_FREQ]={0};
 DOUBLE recv_double_buff[16][5]={0};
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    recordingData=false;
     setWindowTitle(tr("EEGViewer1.0"));
     statusBar();
     createActions();
@@ -19,9 +27,9 @@ MainWindow::MainWindow(QWidget *parent)
     //初始化TCP客户端
     tcpClient = new QTcpSocket(this);   //实例化tcpClient
     tcpClient->abort();                 //取消原有连接
-    connect(tcpClient, SIGNAL(readyRead()), this, SLOT(ReadTCPData()));
+    connect(tcpClient, SIGNAL(readyRead()), this, SLOT(readTCPData()));
     connect(tcpClient, SIGNAL(error(QAbstractSocket::SocketError)),
-            this, SLOT(ReadTCPError(QAbstractSocket::SocketError)));
+            this, SLOT(readTCPError(QAbstractSocket::SocketError)));
 }
 
 MainWindow::~MainWindow()
@@ -29,17 +37,39 @@ MainWindow::~MainWindow()
 
 }
 
-void MainWindow::ReadTCPData()
+void MainWindow::readTCPData()
 {
     QByteArray buffer = tcpClient->readAll();
-
+    static int edfcounter=0;
     if(!buffer.isEmpty())
     {
         memcpy(recv_double_buff,buffer,buffer.size());
-
+        if(recordingData)
+        {
+            if (edfcounter<SMP_FREQ+1)
+            {
+                if (edfcounter==SMP_FREQ)
+                {
+                    for(int i=0; i<edf_chns; i++)
+                    {
+                    edfwrite_digital_samples(hdl, edf_buf[i]); //保存1s一次
+                    }
+                    edfcounter=0;
+                }
+                for(int i=0;i<16;i++) //赋值
+                {
+                    for(int j=0;j<5;j++)
+                    {
+                      edf_buf[(i*5+j)][edfcounter]=(int)recv_double_buff[i][j];
+                    }
+                }
+                edfcounter++;
+            }
+            else edfcounter=0;
+        }else edfcounter=0;
     }
 }
-void MainWindow::ReadTCPError(QAbstractSocket::SocketError)
+void MainWindow::readTCPError(QAbstractSocket::SocketError)
 {
     tcpClient->disconnectFromHost();
     connectAction->setIconText(tr("Connect"));
@@ -101,11 +131,11 @@ void MainWindow::createActions()
     zoomOutAction->setStatusTip(tr("波形缩小"));
 
     startRecord = new QAction(QIcon(":/image/StartRecord.jpg"),tr("StartRecord"),this);
-    connect(startRecord,SIGNAL(triggered()),this,SLOT(showRecordData()));
+    connect(startRecord,SIGNAL(triggered()),this,SLOT(recordData()));
     startRecord->setStatusTip(tr("开始记录"));
 
     stopRecord = new QAction(QIcon(":/image/Stop.jpg"),tr("StopRecord"),this);
-    connect(stopRecord,SIGNAL(triggered()),this,SLOT(closeRecordData()));
+    connect(stopRecord,SIGNAL(triggered()),this,SLOT(stopRecordData()));
     stopRecord->setStatusTip(tr("停止记录"));
 
     connectAction = new QAction(QIcon(":/image/connect.jpg"),tr("Connect"),this);
@@ -151,6 +181,104 @@ void MainWindow::createToolBars()
     mainTool->addAction(connectAction);
 }
 
+void MainWindow::initEdfwrite()
+{
+    int i;
+    QString filename;
+    char*  chfilename;
+    QString sChannellist="IED_AF3,IED_F7,IED_F3,IED_FC5,IED_T7,IED_P7,IED_Pz,IED_O1,IED_O2,IED_P8,IED_T8,IED_FC6,IED_F4,IED_F8,IED_AF4,RESULT";
+    QStringList channellist=sChannellist.split(',');
+    QString sWavelist="theta,alpha,low_beta,high_beta,gamma";
+    QStringList wavelist=sWavelist.split(',');
+    QString sWavelist2="power,smooth,activity,trigger,NULL";
+    QStringList wavelist2=sWavelist2.split(',');
+    QString channelLable;
+    char*  chchannelLable;
+    QDateTime wait_t = QDateTime::currentDateTime();
+
+    filename="C:/haitian/recordFES-"+wait_t.toString("yyMMdd-HHmmss")+".edf";
+    QByteArray ba = filename.toLatin1(); // must
+    chfilename=ba.data();
+    hdl = edfopen_file_writeonly(chfilename, EDFLIB_FILETYPE_EDFPLUS, edf_chns);
+
+    if(hdl<0)
+    {
+        qDebug()<< "error: edfopen_file_writeonly()\n";
+        return;
+    }
+
+    for(i=0; i<edf_chns; i++)
+    {
+        if(edf_set_samplefrequency(hdl, i, SMP_FREQ))
+        {
+            qDebug()<< "error: edf_set_samplefrequency()\n";
+            return;
+        }
+    }
+
+    for(i=0; i<edf_chns; i++)
+    {
+        if(edf_set_physical_maximum(hdl, i, 10000))  //10000可以 50000不行100000不行
+        {
+            qDebug()<< "error: edf_set_physical_maximum()\n";
+            return;
+        }
+    }
+
+    for(i=0; i<edf_chns; i++)
+    {
+        if(edf_set_digital_maximum(hdl, i, 10000))
+        {
+            qDebug()<< "error: edf_set_digital_maximum()\n";
+            return;
+        }
+    }
+
+    for(i=0; i<edf_chns; i++)
+    {
+        if(edf_set_digital_minimum(hdl, i, -10000))
+        {
+            qDebug()<< "error: edf_set_digital_minimum()\n";
+            return;
+        }
+    }
+
+    for(i=0; i<edf_chns; i++)
+    {
+        if(edf_set_physical_minimum(hdl, i, -10000))
+        {
+            qDebug()<< "error: edf_set_physical_minimum()\n";
+            return;
+        }
+    }
+
+
+    for(i=0; i<edf_chns; i++)
+    {
+        if(i<75)
+        {
+          channelLable=channellist[(i/5)]+wavelist[(i%5)];
+        }
+        else channelLable=channellist[(i/5)]+wavelist2[(i%5)];
+        ba = channelLable.toLatin1(); // must
+        chchannelLable=ba.data();
+        edf_set_label(hdl, i, chchannelLable);
+    }
+
+//    for(i=0; i<edf_chns; i++)
+//    {
+//        if(edf_set_physical_dimension(hdl, i, ""))//mV
+//        {
+//            QDebug("error: edf_set_physical_dimension()\n");
+
+//            return(1);
+//        }
+//    }
+
+    return ;
+
+}
+
 /********************************创建相关窗口的槽函数************************/
 
 
@@ -159,8 +287,17 @@ void MainWindow::showWavePlot()
     waveWindow->isShowWave=true;
 }
 
-void MainWindow::showRecordData()
+void MainWindow::recordData()
 {
+    if(recordingData!=true){
+
+      initEdfwrite();
+      recordingData=true;
+    }
+    else{
+
+
+    }
 
 }
 
@@ -178,8 +315,15 @@ void MainWindow::closeWavePlot()
     waveWindow->isShowWave=false;
 }
 
-void MainWindow::closeRecordData()
+void MainWindow::stopRecordData()
 {
+    if(recordingData)
+    {
+
+        recordingData=false;
+        edfclose_file(hdl);
+    }
+
 
 }
 

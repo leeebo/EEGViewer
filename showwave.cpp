@@ -18,7 +18,7 @@ QString sChannellist="IED_AF3,IED_F7,IED_F3,IED_FC5,IED_T7,IED_P7,IED_Pz,IED_O1,
 QStringList channellist=sChannellist.split(',');
 QString sWavelist="theta,alpha,low_beta,high_beta,gamma";
 QStringList wavelist=sWavelist.split(',');
-QString sWavelist2="power,smooth,activity,NULL,NULL";
+QString sWavelist2="power,smooth,activity,trigger,NULL";
 QStringList wavelist2=sWavelist2.split(',');
 
 

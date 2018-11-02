@@ -9,6 +9,9 @@
 #include <QAction>
 #include "showwave.h"
 #include <QTcpSocket>
+
+
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -19,7 +22,8 @@ public:
     void createActions();                 //创造动作函数
     void createMenus();                   //创造菜单栏函数
     void createToolBars();                //创造工具栏函数
-    void SendTCPData();
+    //void sendTCPData();
+    void initEdfwrite();
 protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
@@ -28,13 +32,13 @@ protected:
 private slots:
 /********************************创建相关窗口的槽函数************************/
     void showWavePlot();                  //显示波形窗口
-    void showRecordData();                //显示数据记录波形
+    void recordData();                //显示数据记录波形
     void showAboutWindow();               //显示软件信息窗口
-    void ReadTCPData();
-    void ReadTCPError(QAbstractSocket::SocketError);
+    void readTCPData();
+    void readTCPError(QAbstractSocket::SocketError);
 /********************************关闭相关窗口的槽函数************************/
     void closeWavePlot();                 //关闭波形显示窗口
-    void closeRecordData();               //关闭EMG数据记录窗口
+    void stopRecordData();               //关闭EMG数据记录窗口
 /********************************波形放大、缩小的槽函数************************/
     void waveZoomIn();                    //波形放大
     void waveZoomOut();                   //波形缩小
@@ -42,6 +46,7 @@ private slots:
     void connectToDevice();               //连接设备
 
 private:
+    bool recordingData;
     QMenu *FileMenu;                   //患者信息菜单
     QMenu *toolsMenu;                     //工具菜单
     QMenu *viewMenu;                      //视图菜单
