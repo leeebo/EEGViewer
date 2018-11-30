@@ -10,17 +10,18 @@
 #include <QFont>
 #include <QPixmap>
 #include <QPen>
+#include <QDebug>
 #include"EDFlib-master/edflib.h"
-
-
-extern DOUBLE recv_double_buff[16][5];
+extern double recv_double_buff[16][5];
 QString sChannellist="IED_AF3,IED_F7,IED_F3,IED_FC5,IED_T7,IED_P7,IED_Pz,IED_O1,IED_O2,IED_P8,IED_T8,IED_FC6,IED_F4,IED_F8,IED_AF4,RESULT";
 QStringList channellist=sChannellist.split(',');
 QString sWavelist="theta,alpha,low_beta,high_beta,gamma";
 QStringList wavelist=sWavelist.split(',');
 QString sWavelist2="power,smooth,activity,trigger,NULL";
 QStringList wavelist2=sWavelist2.split(',');
-
+QVector<QVector<double>> Xvalue(CPLOTSIZE,QVector<double>(PLOTBUFSIZE));
+QVector<QVector<double>> Yvalue(CPLOTSIZE,QVector<double>(PLOTBUFSIZE));
+volatile uint initxyvctFlag=0;
 
 ShowWave::ShowWave(QWidget *parent) : QWidget(parent)
 {
@@ -31,31 +32,25 @@ ShowWave::ShowWave(QWidget *parent) : QWidget(parent)
     resize(800,400);
     timer = new QTimer(this);
     connect(timer,SIGNAL(timeout()),this,SLOT(readyShowLine()));
-
     mainLayout = new QGridLayout(this);
     combox1=new QComboBox(this);
     combox1->addItems(channellist);
     connect(combox1,SIGNAL(currentIndexChanged(int)),this,SLOT(showLable()));
-
-    for(int i=0;i<PLOTSIZE;i++)
+    for(int i=0;i<CPLOTSIZE;i++)
     {
-        QPen penColor[PLOTSIZE]={QPen(Qt::blue),QPen(Qt::green),QPen(Qt::red),QPen(Qt::black),QPen(Qt::yellow)};
+        QPen penColor[CPLOTSIZE]={QPen(Qt::blue),QPen(Qt::green),QPen(Qt::red),QPen(Qt::black),QPen(Qt::yellow)};
         customPlotARY[i]=new QCustomPlot();
         customPlotARY[i]->addGraph();
         customPlotARY[i]->graph(0)->setPen(penColor[i]);
     }
-
-
-    for(int i=0;i<PLOTSIZE;i++)
+    for(int i=0;i<CPLOTSIZE;i++)
     {
         customPlotARY[i]->resize(300,300);
-        customPlotARY[i]->xAxis->setRange(0,BUFFERSIZE);
+        customPlotARY[i]->xAxis->setRange(0,PLOTBUFSIZE);
         customPlotARY[i]->yAxis->setRange(fromB,toT);
         customPlotARY[i]->xAxis->setLabel(tr("time"));
         customPlotARY[i]->yAxis->setLabel(wavelist[i]);
     }
-
-
     mainLayout->addWidget(customPlotARY[0],0,1,8,25);
     mainLayout->addWidget(customPlotARY[1],8,1,8,25);
     mainLayout->addWidget(customPlotARY[2],16,1,8,25);
@@ -63,41 +58,40 @@ ShowWave::ShowWave(QWidget *parent) : QWidget(parent)
     mainLayout->addWidget(customPlotARY[4],32,1,8,25);
     mainLayout->addWidget(combox1,40,1,1,1);
     showLable();
-    timer->start(100);
 }
 
-void ShowWave::showLine(QCustomPlot *customPlot[PLOTSIZE],double recvMat[16][5])
+void ShowWave::showLine(QCustomPlot *customPlot[CPLOTSIZE],double recvMat[16][5])
 {
     int currentChannel=combox1->currentIndex();
-    static QVector<QVector<double>> Xvalue(PLOTSIZE);
-    static QVector<QVector<double>> Yvalue(PLOTSIZE);
-    static uint initFlag=0;
  //   static double Buff1[PLOTSIZE][BUFFERSIZE*2];
     //无论如何，折线图一次能展示的区域总是有限的,这里一次最多绘制1800个点
-
     //如果你想图形更加精细，可以多定义些点
-    if(initFlag==0)
+    if(initxyvctFlag==0)
     {
-        for(int i=0;i<PLOTSIZE;i++)
+        for(int i=0;i<CPLOTSIZE;i++)
         {
-            Xvalue[i].resize(BUFFERSIZE);
-            Yvalue[i].resize(BUFFERSIZE);
-            for(int x=0;x<BUFFERSIZE;x++)
+            Xvalue[i].resize(PLOTBUFSIZE);
+            Yvalue[i].resize(PLOTBUFSIZE);
+            for(int x=0;x<PLOTBUFSIZE;x++)
             {
             Xvalue[i][x]=x;
             Yvalue[i][x]=0;
             }
         }
-        initFlag=1;
-
+        initxyvctFlag=1;
     }
-
-    for(int i=0;i<PLOTSIZE;i++)
+    for(int i=0;i<CPLOTSIZE;i++)
     {
-        if(Yvalue[i].size()==BUFFERSIZE)
+      //  qDebug("Yvalue[%d].size()%d",i,Yvalue[i].size());
+        if(Yvalue[i].size()==PLOTBUFSIZE)
         {
             Yvalue[i].removeFirst();
         }
+        else if(Yvalue[i].size()>PLOTBUFSIZE)
+        {
+            Yvalue[i].resize(PLOTBUFSIZE-1);
+        }
+
         Yvalue[i].append(recvMat[currentChannel][i]);//将新数据存入缓冲区
 
             if(isShowWave)
@@ -106,26 +100,25 @@ void ShowWave::showLine(QCustomPlot *customPlot[PLOTSIZE],double recvMat[16][5])
                 customPlot[i]->replot();//重绘图形
             }
 
-
+      // qDebug("Yvalue[%d].size(%d)",i,Yvalue[i].size());
     }
-       //当实时数据超过1800个时，进行以下处理
-
-
+    //当实时数据超过1800个时，进行以下处理
 }
+
 
 void ShowWave::showLable()
 {
     int currentChannel=combox1->currentIndex();
-        for(int i=0;i<PLOTSIZE;i++)
+    for(int i=0;i<CPLOTSIZE;i++)
+    {
+        if(currentChannel<15)
         {
-            if(currentChannel<15)
-            {
             customPlotARY[i]->yAxis->setLabel(wavelist[i]);
 
-            }
-            else customPlotARY[i]->yAxis->setLabel(wavelist2[i]);
-            customPlotARY[i]->replot();//重绘图形
         }
+        else customPlotARY[i]->yAxis->setLabel(wavelist2[i]);
+        customPlotARY[i]->replot();//重绘图形
+    }
 
 }
 
@@ -157,6 +150,14 @@ void ShowWave::mouseReleaseEvent(QMouseEvent *event)
     Q_UNUSED(event);
     QApplication::restoreOverrideCursor();
 }
+void ShowWave::setRange()
+{
+    for(int i=0;i<CPLOTSIZE;i++)
+    {
+        customPlotARY[i]->yAxis->setRange(fromB,toT);
+        customPlotARY[i]->replot();
+    }
+}
 
 void ShowWave::wheelEvent(QWheelEvent *event)
 {
@@ -175,11 +176,10 @@ void ShowWave::wheelEvent(QWheelEvent *event)
             toT=500;
         }
     }
-    for(int i=0;i<PLOTSIZE;i++)
+    for(int i=0;i<CPLOTSIZE;i++)
     {
         customPlotARY[i]->yAxis->setRange(fromB,toT);
         customPlotARY[i]->replot();
-
     }
 
 }

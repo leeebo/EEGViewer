@@ -5,19 +5,20 @@
 #include"EDFlib-master/edflib.h"
 #include<QDebug>
 
-#define edf_chns 80
+#define EDF_CHNS 80
 #define SMP_FREQ 2
 #define PERI_TINMER_MS 1000/SMP_FREQ
-
 int hdl;
-int edf_buf[edf_chns][SMP_FREQ]={0};
-DOUBLE recv_double_buff[16][5]={0};
-
+double edf_buf[EDF_CHNS][SMP_FREQ]={0};
+double recv_double_buff[16][5]={0};
+double recv_double_buff_temp[16][5]={0};
+extern volatile uint initxyvctFlag;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     recordingData=false;
-    setWindowTitle(tr("EEGViewer1.0"));
+    flag_showRawView=1;
+    setWindowTitle(tr("EEGViewer2.0"));
     statusBar();
     createActions();
     createMenus();
@@ -28,6 +29,7 @@ MainWindow::MainWindow(QWidget *parent)
     tcpClient = new QTcpSocket(this);   //实例化tcpClient
     tcpClient->abort();                 //取消原有连接
     connect(tcpClient, SIGNAL(readyRead()), this, SLOT(readTCPData()));
+    connect(this, SIGNAL(SGN_tcpPlot()),waveWindow,SLOT(readyShowLine()));
     connect(tcpClient, SIGNAL(error(QAbstractSocket::SocketError)),
             this, SLOT(readTCPError(QAbstractSocket::SocketError)));
 }
@@ -40,9 +42,12 @@ MainWindow::~MainWindow()
 void MainWindow::readTCPData()
 {
     QByteArray buffer = tcpClient->readAll();
-    static int edfcounter=0;
-    if(!buffer.isEmpty())
+    volatile static int edfcounter=0;
+    //if(!buffer.isEmpty())
+    if(buffer.size()==sizeof(recv_double_buff))  //修改此处，防止溢出
     {
+        if(flag_showRawView==1&&waveWindow->isShowWave==true)
+        emit SGN_tcpPlot();
         memcpy(recv_double_buff,buffer,buffer.size());
         if(recordingData)
         {
@@ -50,9 +55,9 @@ void MainWindow::readTCPData()
             {
                 if (edfcounter==SMP_FREQ)
                 {
-                    for(int i=0; i<edf_chns; i++)
+                    for(int i=0; i<EDF_CHNS; i++)
                     {
-                    edfwrite_digital_samples(hdl, edf_buf[i]); //保存1s一次
+                        edfwrite_physical_samples(hdl, edf_buf[i]); //保存1s一次
                     }
                     edfcounter=0;
                 }
@@ -60,7 +65,8 @@ void MainWindow::readTCPData()
                 {
                     for(int j=0;j<5;j++)
                     {
-                      edf_buf[(i*5+j)][edfcounter]=(int)recv_double_buff[i][j];
+                        edf_buf[(i*5+j)][edfcounter]=recv_double_buff[i][j]; //放大100倍
+                        //qDebug("edf_buf[%d][%d]",(i*5+j),edfcounter);
                     }
                 }
                 edfcounter++;
@@ -99,6 +105,13 @@ void MainWindow::createActions()
     deviceSetting = new QAction(QIcon(":/image/DeviceSetting.jpg"),tr("DeviceSetting"),this);
     deviceSetting->setStatusTip(tr("打开设备设置"));
 
+    rawview=new QAction(tr("Raw"),this); //根据接收数据画波形，收一个画一个
+    rawview->setStatusTip(tr("画出原始数据"));
+    connect(rawview,SIGNAL(triggered()),this,SLOT(showRawView()));
+    smoothview=new QAction(tr("Smooth"),this);             //平滑画波形
+    smoothview->setStatusTip(tr("平滑画出波形"));
+    connect(smoothview,SIGNAL(triggered()),this,SLOT(showSmoothView()));
+
     aboutRecoder = new QAction(QIcon(":/image/aboutRecorder.png"),tr("AboutRecorder"),this);
     connect(aboutRecoder,SIGNAL(triggered()),this,SLOT(showAboutWindow()));
     aboutRecoder->setStatusTip(tr("打开帮助"));
@@ -110,12 +123,12 @@ void MainWindow::createActions()
     connect(closeAction,SIGNAL(triggered()),this,SLOT(close()));
     closeAction->setStatusTip(tr("关闭"));
 
-    startAction = new QAction(QIcon(":/image/Start.jpg"),tr("Start"),this);
+    startAction = new QAction(QIcon(":/image/start.jpg"),tr("Start"),this);
     connect(startAction,SIGNAL(triggered()),this,SLOT(showWavePlot()));
     startAction->setEnabled(false);
     startAction->setStatusTip(tr("显示波形"));
 
-    stopAction = new QAction(QIcon(":/image/Stop.jpg"),tr("Stop"),this);
+    stopAction = new QAction(QIcon(":/image/stop.jpg"),tr("Stop"),this);
     connect(stopAction,SIGNAL(triggered()),this,SLOT(closeWavePlot()));
     stopAction->setEnabled(false);
     stopAction->setStatusTip(tr("停止波形显示"));
@@ -132,18 +145,18 @@ void MainWindow::createActions()
 
     startRecord = new QAction(QIcon(":/image/StartRecord.jpg"),tr("StartRecord"),this);
     connect(startRecord,SIGNAL(triggered()),this,SLOT(recordData()));
+    startRecord->setEnabled(false);
     startRecord->setStatusTip(tr("开始记录"));
 
-    stopRecord = new QAction(QIcon(":/image/Stop.jpg"),tr("StopRecord"),this);
+    stopRecord = new QAction(QIcon(":/image/stop.jpg"),tr("StopRecord"),this);
     connect(stopRecord,SIGNAL(triggered()),this,SLOT(stopRecordData()));
+    stopRecord->setEnabled(false);
     stopRecord->setStatusTip(tr("停止记录"));
 
     connectAction = new QAction(QIcon(":/image/connect.jpg"),tr("Connect"),this);
     connect(connectAction,SIGNAL(triggered()),this,SLOT(connectToDevice()));
     connectAction->setStatusTip(tr("连接设备"));
 }
-
-
 
 void MainWindow::createMenus()
 {
@@ -158,6 +171,8 @@ void MainWindow::createMenus()
     viewMenu = menuBar()->addMenu(tr("View"));
     viewMenu->addAction(zoomInAction);
     viewMenu->addAction(zoomOutAction);
+    viewMenu->addAction(smoothview);
+    viewMenu->addAction(rawview);
 
     helpMenu = menuBar()->addMenu(tr("Help"));
     helpMenu->addAction(aboutRecoder);
@@ -195,11 +210,10 @@ void MainWindow::initEdfwrite()
     QString channelLable;
     char*  chchannelLable;
     QDateTime wait_t = QDateTime::currentDateTime();
-
-    filename="C:/haitian/recordFES-"+wait_t.toString("yyMMdd-HHmmss")+".edf";
+    filename="C:/haitian/RCDFES-"+wait_t.toString("yyMMdd-HHmmss")+".edf";
     QByteArray ba = filename.toLatin1(); // must
     chfilename=ba.data();
-    hdl = edfopen_file_writeonly(chfilename, EDFLIB_FILETYPE_EDFPLUS, edf_chns);
+    hdl = edfopen_file_writeonly(chfilename, EDFLIB_FILETYPE_EDFPLUS, EDF_CHNS);
 
     if(hdl<0)
     {
@@ -207,7 +221,7 @@ void MainWindow::initEdfwrite()
         return;
     }
 
-    for(i=0; i<edf_chns; i++)
+    for(i=0; i<EDF_CHNS; i++)
     {
         if(edf_set_samplefrequency(hdl, i, SMP_FREQ))
         {
@@ -216,36 +230,36 @@ void MainWindow::initEdfwrite()
         }
     }
 
-    for(i=0; i<edf_chns; i++)
+    for(i=0; i<EDF_CHNS; i++)
     {
-        if(edf_set_physical_maximum(hdl, i, 10000))  //10000可以 50000不行100000不行
+        if(edf_set_physical_maximum(hdl, i, 200))  //10000可以 50000不行100000不行 -32768 and 32767
         {
             qDebug()<< "error: edf_set_physical_maximum()\n";
             return;
         }
     }
 
-    for(i=0; i<edf_chns; i++)
+    for(i=0; i<EDF_CHNS; i++)
     {
-        if(edf_set_digital_maximum(hdl, i, 10000))
+        if(edf_set_digital_maximum(hdl, i, 30000))
         {
             qDebug()<< "error: edf_set_digital_maximum()\n";
             return;
         }
     }
 
-    for(i=0; i<edf_chns; i++)
+    for(i=0; i<EDF_CHNS; i++)
     {
-        if(edf_set_digital_minimum(hdl, i, -10000))
+        if(edf_set_digital_minimum(hdl, i, -30000))
         {
             qDebug()<< "error: edf_set_digital_minimum()\n";
             return;
         }
     }
 
-    for(i=0; i<edf_chns; i++)
+    for(i=0; i<EDF_CHNS; i++)
     {
-        if(edf_set_physical_minimum(hdl, i, -10000))
+        if(edf_set_physical_minimum(hdl, i, -200))
         {
             qDebug()<< "error: edf_set_physical_minimum()\n";
             return;
@@ -253,7 +267,7 @@ void MainWindow::initEdfwrite()
     }
 
 
-    for(i=0; i<edf_chns; i++)
+    for(i=0; i<EDF_CHNS; i++)
     {
         if(i<75)
         {
@@ -265,42 +279,43 @@ void MainWindow::initEdfwrite()
         edf_set_label(hdl, i, chchannelLable);
     }
 
-//    for(i=0; i<edf_chns; i++)
-//    {
-//        if(edf_set_physical_dimension(hdl, i, ""))//mV
-//        {
-//            QDebug("error: edf_set_physical_dimension()\n");
+    //    for(i=0; i<edf_chns; i++)
+    //    {
+    //        if(edf_set_physical_dimension(hdl, i, ""))//mV
+    //        {
+    //            QDebug("error: edf_set_physical_dimension()\n");
 
-//            return(1);
-//        }
-//    }
+    //            return(1);
+    //        }
+    //    }
 
     return ;
 
 }
 
 /********************************创建相关窗口的槽函数************************/
-
-
-void MainWindow::showWavePlot()
-{
-    waveWindow->isShowWave=true;
-}
-
 void MainWindow::recordData()
 {
     if(recordingData!=true){
 
       initEdfwrite();
       recordingData=true;
-    }
-    else{
-
-
+      startRecord->setEnabled(false);
+      stopRecord->setEnabled(true);
     }
 
 }
+void MainWindow::stopRecordData()
+{
+    if(recordingData)
+    {
+        recordingData=false;
+        edfclose_file(hdl);
+        startRecord->setEnabled(true);
+        stopRecord->setEnabled(false);
+    }
 
+}
 void MainWindow::showAboutWindow()
 {
     QDialog *aboutWindow = new QDialog();
@@ -309,41 +324,51 @@ void MainWindow::showAboutWindow()
 }
 
 /********************************关闭相关窗口的槽函数************************/
-
+void MainWindow::showWavePlot()
+{
+    waveWindow->isShowWave=true;
+    initxyvctFlag=0;
+    if(flag_showRawView==0){        //显示平滑数据
+        waveWindow->timer->start(100);
+    }
+}
 void MainWindow::closeWavePlot()
 {
     waveWindow->isShowWave=false;
+    waveWindow->timer->stop();
+}
+void MainWindow::showRawView()
+{
+    waveWindow->timer->stop();
+    initxyvctFlag=0;
+    flag_showRawView=1;
 }
 
-void MainWindow::stopRecordData()
+void MainWindow::showSmoothView()
 {
-    if(recordingData)
-    {
-
-        recordingData=false;
-        edfclose_file(hdl);
-    }
-
-
+    flag_showRawView=0;
+    initxyvctFlag=0;
+    if(waveWindow->isShowWave==true)
+    waveWindow->timer->start(100);
 }
 
 /********************************波形放大缩小的槽函数************************/
 void MainWindow::waveZoomIn()
 {
-//    //waveWindow->fromB++;
-//    waveWindow->toT-=10;
-//    if(waveWindow->toT<0){
-//        waveWindow->toT=0;
-//    }
+    waveWindow->toT-=10;
+    if(waveWindow->toT<0){
+        waveWindow->toT=0;
+    }
+    waveWindow->setRange();
 }
 
 void MainWindow::waveZoomOut()
 {
-//    //waveWindow->fromB--;
-//    waveWindow->toT+=10;
-//    if(waveWindow->toT>500){
-//        waveWindow->toT=500;
-//    }
+    waveWindow->toT+=10;
+    if(waveWindow->toT>500){
+        waveWindow->toT=500;
+    }
+   waveWindow->setRange();
 }
 
 /********************************连接设备的槽函数************************/
@@ -355,30 +380,32 @@ void MainWindow::connectToDevice()
         if (tcpClient->waitForConnected(2000))  // 连接成功则进入if{}
         {
           connectAction->setIconText(tr("Disconnect"));
+          startRecord->setEnabled(true);
+          //stopRecord->setEnabled(true);
           startAction->setEnabled(true);
           stopAction->setEnabled(true);
           zoomInAction->setEnabled(true);
           zoomOutAction->setEnabled(true);
         }
-
-
-
     }
     else
     {
         tcpClient->disconnectFromHost();
-                if (tcpClient->state() == QAbstractSocket::UnconnectedState||tcpClient->waitForDisconnected(3000))  //已断开连接则进入if{}
-                {
-                    connectAction->setIconText(tr("Connect"));
-                    startAction->setEnabled(FALSE);
-                    stopAction->setEnabled(FALSE);
-                    zoomInAction->setEnabled(FALSE);
-                    zoomOutAction->setEnabled(FALSE);
-                }
+        if (tcpClient->state() == QAbstractSocket::UnconnectedState||tcpClient->waitForDisconnected(3000))  //已断开连接则进入if{}
+        {
+            connectAction->setIconText(tr("Connect"));
+            startRecord->setEnabled(FALSE);
+            stopRecord->setEnabled(FALSE);
+            startAction->setEnabled(FALSE);
+            stopAction->setEnabled(FALSE);
+            zoomInAction->setEnabled(FALSE);
+            zoomOutAction->setEnabled(FALSE);
+        }
 
     }
 
 }
+
 
 /********************************相关鼠标事件*******************************/
 

@@ -24,10 +24,15 @@ public:
     void createToolBars();                //创造工具栏函数
     //void sendTCPData();
     void initEdfwrite();
+    int flag_showRawView;
 protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
+
+signals:
+    SGN_tcpPlot();
+
 
 private slots:
 /********************************创建相关窗口的槽函数************************/
@@ -44,7 +49,8 @@ private slots:
     void waveZoomOut();                   //波形缩小
 /********************************波形放大、缩小的槽函数************************/
     void connectToDevice();               //连接设备
-
+    void showRawView();
+    void showSmoothView();
 private:
     bool recordingData;
     QMenu *FileMenu;                   //患者信息菜单
@@ -62,6 +68,8 @@ private:
     QAction *stopAction;                  //停止展示波形动作
     QAction *zoomInAction;                //波形放大
     QAction *zoomOutAction;               //波形缩小
+    QAction *rawview;                //波形放大
+    QAction *smoothview;               //波形缩小
     QAction *startRecord;                 //开始记录动作
     QAction *stopRecord;                  //停止记录动作
     QAction *connectAction;               //连接设备动作

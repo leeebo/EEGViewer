@@ -5,13 +5,13 @@
         <file>DeviceSetting.jpg</file>
         <file>handsAction.png</file>
         <file>Open.jpg</file>
-        <file>Start.jpg</file>
         <file>StartRecord.jpg</file>
-        <file>Stop.jpg</file>
         <file>subject.jpg</file>
         <file>SystemSetting.jpg</file>
         <file>zoomIn.jpg</file>
         <file>zoomOut.jpg</file>
         <file>connect.jpg</file>
+        <file>start.jpg</file>
+        <file>stop.jpg</file>
     </qresource>
 </RCC>
