@@ -10,7 +10,7 @@ class ShowWave : public QWidget
 {
     Q_OBJECT
 public:
-    explicit ShowWave(QWidget *parent = 0);
+    explicit ShowWave(QWidget *parent = nullptr);
     void showLine(QCustomPlot *customPlot[CPLOTSIZE], double recvMat[16][5]);
     bool isShowWave;
     int fromB;

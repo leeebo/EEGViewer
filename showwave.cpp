@@ -13,19 +13,19 @@
 #include <QDebug>
 #include"EDFlib-master/edflib.h"
 extern double recv_double_buff[16][5];
-QString sChannellist="IED_AF3,IED_F7,IED_F3,IED_FC5,IED_T7,IED_P7,IED_Pz,IED_O1,IED_O2,IED_P8,IED_T8,IED_FC6,IED_F4,IED_F8,IED_AF4,RESULT";
-QStringList channellist=sChannellist.split(',');
-QString sWavelist="theta,alpha,low_beta,high_beta,gamma";
-QStringList wavelist=sWavelist.split(',');
-QString sWavelist2="power,smooth,activity,trigger,NULL";
-QStringList wavelist2=sWavelist2.split(',');
-QVector<QVector<double>> Xvalue(CPLOTSIZE,QVector<double>(PLOTBUFSIZE));
-QVector<QVector<double>> Yvalue(CPLOTSIZE,QVector<double>(PLOTBUFSIZE));
-volatile uint initxyvctFlag=0;
+static QString sChannellist="IED_AF3,IED_F7,IED_F3,IED_FC5,IED_T7,IED_P7,IED_Pz,IED_O1,IED_O2,IED_P8,IED_T8,IED_FC6,IED_F4,IED_F8,IED_AF4,RESULT";
+static QStringList channellist=sChannellist.split(',');
+static QString sWavelist="theta,alpha,low_beta,high_beta,gamma";
+static QStringList wavelist=sWavelist.split(',');
+static QString sWavelist2="power,smooth,activity,trigger,NULL";
+static QStringList wavelist2=sWavelist2.split(',');
+static QVector<QVector<double>> Xvalue(CPLOTSIZE,QVector<double>(PLOTBUFSIZE));
+static QVector<QVector<double>> Yvalue(CPLOTSIZE,QVector<double>(PLOTBUFSIZE));
+static volatile uint initxyvctFlag=0;
 
 ShowWave::ShowWave(QWidget *parent) : QWidget(parent)
 {
-    isShowWave=FALSE;
+    isShowWave=false;
     fromB=0;
     toT=100;
     setWindowTitle(tr("波形显示"));

@@ -17,7 +17,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = 0);
+    MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     void createActions();                 //创造动作函数
     void createMenus();                   //创造菜单栏函数
@@ -31,7 +31,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event);
 
 signals:
-    SGN_tcpPlot();
+    void SGN_tcpPlot();
 
 
 private slots:

@@ -8,10 +8,10 @@
 #define EDF_CHNS 80
 #define SMP_FREQ 2
 #define PERI_TINMER_MS 1000/SMP_FREQ
-int hdl;
-double edf_buf[EDF_CHNS][SMP_FREQ]={0};
-double recv_double_buff[16][5]={0};
-double recv_double_buff_temp[16][5]={0};
+static int hdl;
+static double edf_buf[EDF_CHNS][SMP_FREQ]={{0}};
+static double recv_double_buff[16][5]={{0}};
+static double recv_double_buff_temp[16][5]={{0}};
 extern volatile uint initxyvctFlag;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -79,10 +79,10 @@ void MainWindow::readTCPError(QAbstractSocket::SocketError)
 {
     tcpClient->disconnectFromHost();
     connectAction->setIconText(tr("Connect"));
-    startAction->setEnabled(FALSE);
-    stopAction->setEnabled(FALSE);
-    zoomInAction->setEnabled(FALSE);
-    zoomOutAction->setEnabled(FALSE);
+    startAction->setEnabled(false);
+    stopAction->setEnabled(false);
+    zoomInAction->setEnabled(false);
+    zoomOutAction->setEnabled(false);
     QMessageBox msgBox;
     msgBox.setText(tr("failed to connect server because %1").arg(tcpClient->errorString()));
     //xec();
@@ -374,7 +374,7 @@ void MainWindow::waveZoomOut()
 /********************************连接设备的槽函数************************/
 void MainWindow::connectToDevice()
 {
-    if(startAction->isEnabled()==FALSE)
+    if(startAction->isEnabled()==false)
     {
         tcpClient->connectToHost("127.0.0.1", 4235);
         if (tcpClient->waitForConnected(2000))  // 连接成功则进入if{}
@@ -394,12 +394,12 @@ void MainWindow::connectToDevice()
         if (tcpClient->state() == QAbstractSocket::UnconnectedState||tcpClient->waitForDisconnected(3000))  //已断开连接则进入if{}
         {
             connectAction->setIconText(tr("Connect"));
-            startRecord->setEnabled(FALSE);
-            stopRecord->setEnabled(FALSE);
-            startAction->setEnabled(FALSE);
-            stopAction->setEnabled(FALSE);
-            zoomInAction->setEnabled(FALSE);
-            zoomOutAction->setEnabled(FALSE);
+            startRecord->setEnabled(false);
+            stopRecord->setEnabled(false);
+            startAction->setEnabled(false);
+            stopAction->setEnabled(false);
+            zoomInAction->setEnabled(false);
+            zoomOutAction->setEnabled(false);
         }
 
     }
