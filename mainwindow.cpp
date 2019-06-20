@@ -10,7 +10,7 @@
 #define PERI_TINMER_MS 1000/SMP_FREQ
 static int hdl;
 static double edf_buf[EDF_CHNS][SMP_FREQ]={{0}};
-static double recv_double_buff[16][5]={{0}};
+double recv_double_buff[16][5]={{0}};
 static double recv_double_buff_temp[16][5]={{0}};
 extern volatile uint initxyvctFlag;
 MainWindow::MainWindow(QWidget *parent)

@@ -21,7 +21,7 @@ static QString sWavelist2="power,smooth,activity,trigger,NULL";
 static QStringList wavelist2=sWavelist2.split(',');
 static QVector<QVector<double>> Xvalue(CPLOTSIZE,QVector<double>(PLOTBUFSIZE));
 static QVector<QVector<double>> Yvalue(CPLOTSIZE,QVector<double>(PLOTBUFSIZE));
-static volatile uint initxyvctFlag=0;
+volatile uint initxyvctFlag=0;
 
 ShowWave::ShowWave(QWidget *parent) : QWidget(parent)
 {
