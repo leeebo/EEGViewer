@@ -2,23 +2,27 @@
 #include <QIcon>
 #include <QHBoxLayout>
 #include <QDialog>
-#include"EDFlib-master/edflib.h"
+//#include"EDFlib-master/edflib.h"
 #include<QDebug>
+#include"inputip.h"
 
 #define EDF_CHNS 80
 #define SMP_FREQ 2
 #define PERI_TINMER_MS 1000/SMP_FREQ
-static int hdl;
-static double edf_buf[EDF_CHNS][SMP_FREQ]={{0}};
-static double recv_double_buff[16][5]={{0}};
-static double recv_double_buff_temp[16][5]={{0}};
+//static int hdl;
+//static double edf_buf[EDF_CHNS][SMP_FREQ]={{0}};
+double recv_double_buff[16][5]={{0}};
+uint32_t recv_u32_buff[100]={0};
+//static double recv_double_buff_temp[16][5]={{0}};
 extern volatile uint initxyvctFlag;
+QString ip="127.0.0.1";
+int port=6666;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     recordingData=false;
     flag_showRawView=1;
-    setWindowTitle(tr("EEGViewer2.0"));
+    setWindowTitle(tr("EspViewer"));
     statusBar();
     createActions();
     createMenus();
@@ -44,11 +48,12 @@ void MainWindow::readTCPData()
     QByteArray buffer = tcpClient->readAll();
     volatile static int edfcounter=0;
     //if(!buffer.isEmpty())
-    if(buffer.size()==sizeof(recv_double_buff))  //修改此处，防止溢出
+    //if(buffer.size()==sizeof(recv_double_buff))  //修改此处，防止溢出
+    if(buffer.size()==sizeof(recv_u32_buff))
     {
+        memcpy(recv_u32_buff,buffer,buffer.size());
         if(flag_showRawView==1&&waveWindow->isShowWave==true)
         emit SGN_tcpPlot();
-        memcpy(recv_double_buff,buffer,buffer.size());
         if(recordingData)
         {
             if (edfcounter<SMP_FREQ+1)
@@ -57,7 +62,7 @@ void MainWindow::readTCPData()
                 {
                     for(int i=0; i<EDF_CHNS; i++)
                     {
-                        edfwrite_physical_samples(hdl, edf_buf[i]); //保存1s一次
+                        //edfwrite_physical_samples(hdl, edf_buf[i]); //保存1s一次
                     }
                     edfcounter=0;
                 }
@@ -65,7 +70,7 @@ void MainWindow::readTCPData()
                 {
                     for(int j=0;j<5;j++)
                     {
-                        edf_buf[(i*5+j)][edfcounter]=recv_double_buff[i][j]; //放大100倍
+                       // edf_buf[(i*5+j)][edfcounter]=recv_double_buff[i][j]; //放大100倍
                         //qDebug("edf_buf[%d][%d]",(i*5+j),edfcounter);
                     }
                 }
@@ -103,6 +108,7 @@ void MainWindow::createActions()
     systemSetting->setStatusTip(tr("打开系统设置"));
 
     deviceSetting = new QAction(QIcon(":/image/DeviceSetting.jpg"),tr("DeviceSetting"),this);
+    connect(deviceSetting,SIGNAL(triggered()),this,SLOT(setTCP_IP_PORT()));
     deviceSetting->setStatusTip(tr("打开设备设置"));
 
     rawview=new QAction(tr("Raw"),this); //根据接收数据画波形，收一个画一个
@@ -196,109 +202,116 @@ void MainWindow::createToolBars()
     mainTool->addAction(connectAction);
 }
 
-void MainWindow::initEdfwrite()
+void MainWindow::setTCP_IP_PORT()
 {
-    int i;
-    QString filename;
-    char*  chfilename;
-    QString sChannellist="IED_AF3,IED_F7,IED_F3,IED_FC5,IED_T7,IED_P7,IED_Pz,IED_O1,IED_O2,IED_P8,IED_T8,IED_FC6,IED_F4,IED_F8,IED_AF4,RESULT";
-    QStringList channellist=sChannellist.split(',');
-    QString sWavelist="theta,alpha,low_beta,high_beta,gamma";
-    QStringList wavelist=sWavelist.split(',');
-    QString sWavelist2="power,smooth,activity,trigger,NULL";
-    QStringList wavelist2=sWavelist2.split(',');
-    QString channelLable;
-    char*  chchannelLable;
-    QDateTime wait_t = QDateTime::currentDateTime();
-    filename="C:/haitian/RCDFES-"+wait_t.toString("yyMMdd-HHmmss")+".edf";
-    QByteArray ba = filename.toLatin1(); // must
-    chfilename=ba.data();
-    hdl = edfopen_file_writeonly(chfilename, EDFLIB_FILETYPE_EDFPLUS, EDF_CHNS);
-
-    if(hdl<0)
-    {
-        qDebug()<< "error: edfopen_file_writeonly()\n";
-        return;
-    }
-
-    for(i=0; i<EDF_CHNS; i++)
-    {
-        if(edf_set_samplefrequency(hdl, i, SMP_FREQ))
-        {
-            qDebug()<< "error: edf_set_samplefrequency()\n";
-            return;
-        }
-    }
-
-    for(i=0; i<EDF_CHNS; i++)
-    {
-        if(edf_set_physical_maximum(hdl, i, 200))  //10000可以 50000不行100000不行 -32768 and 32767
-        {
-            qDebug()<< "error: edf_set_physical_maximum()\n";
-            return;
-        }
-    }
-
-    for(i=0; i<EDF_CHNS; i++)
-    {
-        if(edf_set_digital_maximum(hdl, i, 30000))
-        {
-            qDebug()<< "error: edf_set_digital_maximum()\n";
-            return;
-        }
-    }
-
-    for(i=0; i<EDF_CHNS; i++)
-    {
-        if(edf_set_digital_minimum(hdl, i, -30000))
-        {
-            qDebug()<< "error: edf_set_digital_minimum()\n";
-            return;
-        }
-    }
-
-    for(i=0; i<EDF_CHNS; i++)
-    {
-        if(edf_set_physical_minimum(hdl, i, -200))
-        {
-            qDebug()<< "error: edf_set_physical_minimum()\n";
-            return;
-        }
-    }
-
-
-    for(i=0; i<EDF_CHNS; i++)
-    {
-        if(i<75)
-        {
-          channelLable=channellist[(i/5)]+wavelist[(i%5)];
-        }
-        else channelLable=channellist[(i/5)]+wavelist2[(i%5)];
-        ba = channelLable.toLatin1(); // must
-        chchannelLable=ba.data();
-        edf_set_label(hdl, i, chchannelLable);
-    }
-
-    //    for(i=0; i<edf_chns; i++)
-    //    {
-    //        if(edf_set_physical_dimension(hdl, i, ""))//mV
-    //        {
-    //            QDebug("error: edf_set_physical_dimension()\n");
-
-    //            return(1);
-    //        }
-    //    }
-
-    return ;
-
+    qDebug()<<"setTCP_IP_PORT";
+    inputIP *getIpWnd=new inputIP(this);
+    getIpWnd->exec();
+    getIpWnd->show();
 }
+
+//void MainWindow::initEdfwrite()
+//{
+//    int i;
+//    QString filename;
+//    char*  chfilename;
+//    QString sChannellist="IED_AF3,IED_F7,IED_F3,IED_FC5,IED_T7,IED_P7,IED_Pz,IED_O1,IED_O2,IED_P8,IED_T8,IED_FC6,IED_F4,IED_F8,IED_AF4,RESULT";
+//    QStringList channellist=sChannellist.split(',');
+//    QString sWavelist="theta,alpha,low_beta,high_beta,gamma";
+//    QStringList wavelist=sWavelist.split(',');
+//    QString sWavelist2="power,smooth,activity,trigger,NULL";
+//    QStringList wavelist2=sWavelist2.split(',');
+//    QString channelLable;
+//    char*  chchannelLable;
+//    QDateTime wait_t = QDateTime::currentDateTime();
+//    filename="C:/haitian/RCDFES-"+wait_t.toString("yyMMdd-HHmmss")+".edf";
+//    QByteArray ba = filename.toLatin1(); // must
+//    chfilename=ba.data();
+//    hdl = edfopen_file_writeonly(chfilename, EDFLIB_FILETYPE_EDFPLUS, EDF_CHNS);
+
+//    if(hdl<0)
+//    {
+//        qDebug()<< "error: edfopen_file_writeonly()\n";
+//        return;
+//    }
+
+//    for(i=0; i<EDF_CHNS; i++)
+//    {
+//        if(edf_set_samplefrequency(hdl, i, SMP_FREQ))
+//        {
+//            qDebug()<< "error: edf_set_samplefrequency()\n";
+//            return;
+//        }
+//    }
+
+//    for(i=0; i<EDF_CHNS; i++)
+//    {
+//        if(edf_set_physical_maximum(hdl, i, 200))  //10000可以 50000不行100000不行 -32768 and 32767
+//        {
+//            qDebug()<< "error: edf_set_physical_maximum()\n";
+//            return;
+//        }
+//    }
+
+//    for(i=0; i<EDF_CHNS; i++)
+//    {
+//        if(edf_set_digital_maximum(hdl, i, 30000))
+//        {
+//            qDebug()<< "error: edf_set_digital_maximum()\n";
+//            return;
+//        }
+//    }
+
+//    for(i=0; i<EDF_CHNS; i++)
+//    {
+//        if(edf_set_digital_minimum(hdl, i, -30000))
+//        {
+//            qDebug()<< "error: edf_set_digital_minimum()\n";
+//            return;
+//        }
+//    }
+
+//    for(i=0; i<EDF_CHNS; i++)
+//    {
+//        if(edf_set_physical_minimum(hdl, i, -200))
+//        {
+//            qDebug()<< "error: edf_set_physical_minimum()\n";
+//            return;
+//        }
+//    }
+
+
+//    for(i=0; i<EDF_CHNS; i++)
+//    {
+//        if(i<75)
+//        {
+//          channelLable=channellist[(i/5)]+wavelist[(i%5)];
+//        }
+//        else channelLable=channellist[(i/5)]+wavelist2[(i%5)];
+//        ba = channelLable.toLatin1(); // must
+//        chchannelLable=ba.data();
+//        edf_set_label(hdl, i, chchannelLable);
+//    }
+
+//    //    for(i=0; i<edf_chns; i++)
+//    //    {
+//    //        if(edf_set_physical_dimension(hdl, i, ""))//mV
+//    //        {
+//    //            QDebug("error: edf_set_physical_dimension()\n");
+
+//    //            return(1);
+//    //        }
+//    //    }
+
+//    return ;
+
+//}
 
 /********************************创建相关窗口的槽函数************************/
 void MainWindow::recordData()
 {
     if(recordingData!=true){
-
-      initEdfwrite();
+      //initEdfwrite();
       recordingData=true;
       startRecord->setEnabled(false);
       stopRecord->setEnabled(true);
@@ -310,7 +323,7 @@ void MainWindow::stopRecordData()
     if(recordingData)
     {
         recordingData=false;
-        edfclose_file(hdl);
+       // edfclose_file(hdl);
         startRecord->setEnabled(true);
         stopRecord->setEnabled(false);
     }
@@ -328,6 +341,7 @@ void MainWindow::showWavePlot()
 {
     waveWindow->isShowWave=true;
     initxyvctFlag=0;
+    tcpClient->write("start");
     if(flag_showRawView==0){        //显示平滑数据
         waveWindow->timer->start(100);
     }
@@ -336,6 +350,7 @@ void MainWindow::closeWavePlot()
 {
     waveWindow->isShowWave=false;
     waveWindow->timer->stop();
+    tcpClient->write("stop");
 }
 void MainWindow::showRawView()
 {
@@ -365,8 +380,8 @@ void MainWindow::waveZoomIn()
 void MainWindow::waveZoomOut()
 {
     waveWindow->toT+=10;
-    if(waveWindow->toT>500){
-        waveWindow->toT=500;
+    if(waveWindow->toT>4000){
+        waveWindow->toT=4000;
     }
    waveWindow->setRange();
 }
@@ -376,7 +391,7 @@ void MainWindow::connectToDevice()
 {
     if(startAction->isEnabled()==false)
     {
-        tcpClient->connectToHost("127.0.0.1", 4235);
+        tcpClient->connectToHost(ip, port);
         if (tcpClient->waitForConnected(2000))  // 连接成功则进入if{}
         {
           connectAction->setIconText(tr("Disconnect"));

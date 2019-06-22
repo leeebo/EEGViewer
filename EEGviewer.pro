@@ -4,11 +4,11 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT += core gui
 QT += network
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
-TARGET =EEGviewer #EMG_GUI
+TARGET =EspViewer #EMG_GUI
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use
@@ -28,13 +28,15 @@ SOURCES += main.cpp\
     showwave.cpp \
     qcustomplot.cpp \
     systemsetting.cpp \
-    EDFlib-master/edflib.c
+ #   EDFlib-master/edflib.c
+    inputip.cpp
 
 HEADERS  += mainwindow.h \
     showwave.h \
     qcustomplot.h \
     systemsetting.h \
-    EDFlib-master/edflib.h
+   # EDFlib-master/edflib.h
+    inputip.h
 
 RESOURCES += \
     image.qrc
@@ -42,4 +44,5 @@ RESOURCES += \
 RC_ICONS = test7.ico
 
 FORMS += \
-    systemsetting.ui
+    systemsetting.ui \
+    inputip.ui

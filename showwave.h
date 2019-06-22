@@ -3,8 +3,8 @@
 #include <QWidget>
 #include <QVector>
 #include "qcustomplot.h"
-#define PLOTBUFSIZE 100
-#define CPLOTSIZE 5
+#define PLOTBUFSIZE 5000
+#define CPLOTSIZE 2
 
 class ShowWave : public QWidget
 {
@@ -12,6 +12,7 @@ class ShowWave : public QWidget
 public:
     explicit ShowWave(QWidget *parent = nullptr);
     void showLine(QCustomPlot *customPlot[CPLOTSIZE], double recvMat[16][5]);
+    void showLine(QCustomPlot *customPlot[CPLOTSIZE], uint32_t recvMat[]);
     bool isShowWave;
     int fromB;
     int toT;

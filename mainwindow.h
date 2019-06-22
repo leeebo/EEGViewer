@@ -23,7 +23,7 @@ public:
     void createMenus();                   //创造菜单栏函数
     void createToolBars();                //创造工具栏函数
     //void sendTCPData();
-    void initEdfwrite();
+    //void initEdfwrite();
     int flag_showRawView;
 protected:
     void mousePressEvent(QMouseEvent *event);
@@ -51,6 +51,7 @@ private slots:
     void connectToDevice();               //连接设备
     void showRawView();
     void showSmoothView();
+    void setTCP_IP_PORT();
 private:
     bool recordingData;
     QMenu *FileMenu;                   //患者信息菜单
